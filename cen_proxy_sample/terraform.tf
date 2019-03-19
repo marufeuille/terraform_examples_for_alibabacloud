@@ -201,7 +201,7 @@ resource "alicloud_instance" "proxy-a" {
 }
 
 resource "alicloud_eip_association" "eip-a-ass" {
-  provider   = "alicloud.region-a"
+  provider      = "alicloud.region-a"
   allocation_id = "${alicloud_eip.eip-a.id}"
   instance_id   = "${alicloud_instance.proxy-a.id}"
 }
@@ -220,14 +220,14 @@ resource "alicloud_instance" "proxy-b" {
 }
 
 resource "alicloud_eip_association" "eip-b-ass" {
-  provider   = "alicloud.region-b"
+  provider      = "alicloud.region-b"
   allocation_id = "${alicloud_eip.eip-b.id}"
   instance_id   = "${alicloud_instance.proxy-b.id}"
 }
 
 data "template_file" "prv-proxy-a" {
   template = "${file("templates/provisioning-proxy-a.tpl")}"
-  vars = {
+  vars     = {
     password   = "${var.ecs-password}"
     publickey  = "${var.publickey}"
   }
