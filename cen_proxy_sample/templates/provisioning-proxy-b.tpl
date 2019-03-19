@@ -1,6 +1,5 @@
-yum update
-yum install -y wget
-yum install -y ansible
+yum update -y
+yum install -y squid
 cd /root
 useradd ecs-user
 echo '${password}' | passwd --stdin ecs-user
@@ -10,8 +9,11 @@ chown -R ecs-user:ecs-user /home/ecs-user
 chmod 700 /home/ecs-user/.ssh
 chmod 400 /home/ecs-user/.ssh/authorized_keys
 echo "ecs-user  ALL=(ALL)       ALL" > /etc/sudoers
-echo export PROXY_A_IP="${proxy-a-ip}" >> /etc/environment
-echo export DEST_DOMAIN="${dest-domain}" >> /etc/environment
-source /etc/environment
-cd /tmp
-ansible-playbook playbook.yml
+export PROXY_A_IP="${proxy-a-ip}"
+export DEST_DOMAINS="${dest-domains}"
+chmod +x /tmp/make-squid-b-conf.sh
+/tmp/make-squid-b-conf.sh > /etc/squid/squid.conf
+systemctl restart squid
+systemctl enable squid
+
+timedatectl set-timezone Asia/Tokyo

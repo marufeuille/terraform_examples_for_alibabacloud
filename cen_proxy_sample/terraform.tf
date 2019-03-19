@@ -197,7 +197,7 @@ resource "alicloud_instance" "proxy-a" {
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-a.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-a.id}"
-  user_data            = "#!/bin/bash\necho \"${file("ansible/playbook.yml")}\" > /tmp/playbook.yml\necho \"${file("ansible/squid-a.conf.j2")}\" > /tmp/squid.conf.j2\n${data.template_file.prv-proxy-a.rendered}"
+  user_data            = "#!/bin/bash\necho \"${file("squid/squid-a.conf")}\" > /tmp/squid.conf\n${data.template_file.prv-proxy-a.rendered}"
 }
 
 resource "alicloud_eip_association" "eip-a-ass" {
@@ -216,7 +216,7 @@ resource "alicloud_instance" "proxy-b" {
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-b.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-b.id}"
-  user_data            = "#!/bin/bash\necho \"${file("ansible/playbook.yml")}\" > /tmp/playbook.yml\necho \"${file("ansible/squid-b.conf.j2")}\" > /tmp/squid.conf.j2\n${data.template_file.prv-proxy-b.rendered}"
+  user_data            = "#!/bin/bash\necho '${file("squid/make-squid-b-conf.sh")}' > /tmp/make-squid-b-conf.sh\n${data.template_file.prv-proxy-b.rendered}"
 }
 
 resource "alicloud_eip_association" "eip-b-ass" {
@@ -235,10 +235,10 @@ data "template_file" "prv-proxy-a" {
 
 data "template_file" "prv-proxy-b" {
   template = "${file("templates/provisioning-proxy-b.tpl")}"
-  vars = {
-    password    = "${var.ecs-password}"
-    publickey   = "${var.publickey}"
-    proxy-a-ip  = "${alicloud_instance.proxy-a.private_ip}"
-    dest-domain = "${var.dest-domain}"
+  vars     = {
+    password     = "${var.ecs-password}"
+    publickey    = "${var.publickey}"
+    proxy-a-ip   = "${alicloud_instance.proxy-a.private_ip}"
+    dest-domains = "${var.dest-domains}"
   }
 }

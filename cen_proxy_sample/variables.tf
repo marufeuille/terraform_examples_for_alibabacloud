@@ -23,7 +23,7 @@ variable "ssl_vpn_client_cert_name" {}
 variable "zone_region-a" {}
 variable "zone_region-b" {}
 variable "publickey" {}
-variable "dest-domain" {}
+variable "dest-domains" {}
 variable "ecs-password" {
   default = "Test1234!"
 }
