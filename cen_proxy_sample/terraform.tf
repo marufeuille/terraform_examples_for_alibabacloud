@@ -189,11 +189,11 @@ resource "alicloud_eip" "eip-b" {
 
 resource "alicloud_instance" "proxy-a" {
   provider             = "alicloud.region-a"
-  instance_name        = "terraform-ecs"
-  host_name            = "proxy-ecs"
+  instance_name        = "${var.instance_name_region-a}"
+  host_name            = "${var.host_name_region-a}"
   availability_zone    = "${var.zone_region-a}"
   image_id             = "centos_7_3_64_40G_base_20170322.vhd"
-  instance_type        = "ecs.n4.small"
+  instance_type        = "${var.instance_type_region-a}"
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-a.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-a.id}"
@@ -208,11 +208,11 @@ resource "alicloud_eip_association" "eip-a-ass" {
 
 resource "alicloud_instance" "proxy-b" {
   provider             = "alicloud.region-b"
-  instance_name        = "terraform-ecs"
-  host_name            = "proxy-ecs"
+  instance_name        = "${var.instance_name_region-b}"
+  host_name            = "${var.host_name_region-b}"
   availability_zone    = "${var.zone_region-b}"
   image_id             = "centos_7_3_64_40G_base_20170322.vhd"
-  instance_type        = "ecs.n4.small"
+  instance_type        = "${var.instance_type_region-b}"
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-b.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-b.id}"
@@ -241,4 +241,46 @@ data "template_file" "prv-proxy-b" {
     proxy-a-ip   = "${alicloud_instance.proxy-a.private_ip}"
     dest-domains = "${var.dest-domains}"
   }
+}
+
+resource "alicloud_log_project" "project-a"{
+  provider    = "alicloud.region-a"
+  name        = "${var.log_project_name-a}"
+  description = "create by terraform"
+}
+
+resource "alicloud_log_store" "store-a"{
+  provider              = "alicloud.region-a"
+  project               = "${alicloud_log_project.project-a.name}"
+  name                  = "${var.log_store_name-a}"
+  retention_period      = 3650
+  shard_count           = 2
+  auto_split            = true
+  max_split_shard_count = 60
+  append_meta           = true
+}
+resource "alicloud_logtail_config" "config-a" {
+  provider     = "alicloud.region-a"
+  project      = "${alicloud_log_project.project-a.name}"
+  logstore     = "${alicloud_log_store.store-a.name}"
+  input_type   = "file"
+  log_sample   = "test"
+  name         = "${var.logtail_config_name-a}"
+  output_type  = "LogService"
+  input_detail = "${data.template_file.configjs.rendered}"
+}
+
+data "template_file" "configjs" {
+  template = "${file("templates/config.tpl")}"
+  vars     = {
+    configname     = "${var.logtail_config_name-a}"
+    logstorename    = "${var.log_store_name-a}"
+  }
+}
+
+resource "alicloud_log_machine_group" "squid-a" {
+  project = "${alicloud_log_project.project-a.name}"
+  name = "tf-machine-group"
+  identify_type = "ip"
+  identify_list = ["alicloud_instance.proxy-a.private_ip"]
 }
