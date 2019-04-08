@@ -41,6 +41,7 @@ resource "alicloud_vswitch" "vsw_region-b" {
 resource "alicloud_cen_instance" "cen" {
   provider    = "alicloud.region-a"
   name        = "${var.cen_name}"
+  depends_on  = ["alicloud_vswitch.vsw_region-a", "alicloud_vswitch.vsw_region-b"]
   description = "${var.cen_description}"
 }
 
@@ -197,7 +198,7 @@ resource "alicloud_instance" "proxy-a" {
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-a.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-a.id}"
-  user_data            = "#!/bin/bash\necho \"${file("squid/squid-a.conf")}\" > /tmp/squid.conf\n${data.template_file.prv-proxy-a.rendered}"
+  user_data            = "#!/bin/bash\necho \"${file("static/squid/squid-a.conf")}\" > /tmp/squid.conf\n${data.template_file.prv-proxy-a.rendered}"
 }
 
 resource "alicloud_eip_association" "eip-a-ass" {
@@ -216,7 +217,7 @@ resource "alicloud_instance" "proxy-b" {
   system_disk_category = "cloud_efficiency"
   security_groups      = ["${alicloud_security_group.sg_region-b.id}"]
   vswitch_id           = "${alicloud_vswitch.vsw_region-b.id}"
-  user_data            = "#!/bin/bash\necho '${file("squid/make-squid-b-conf.sh")}' > /tmp/make-squid-b-conf.sh\n${data.template_file.prv-proxy-b.rendered}"
+  user_data            = "#!/bin/bash\necho '${file("static/squid/make-squid-b-conf.sh")}' > /tmp/make-squid-b-conf.sh\n${data.template_file.prv-proxy-b.rendered}"
 }
 
 resource "alicloud_eip_association" "eip-b-ass" {
@@ -230,6 +231,7 @@ data "template_file" "prv-proxy-a" {
   vars     = {
     password   = "${var.ecs-password}"
     publickey  = "${var.publickey}"
+    region-id  = "${var.region-a}"
   }
 }
 
@@ -240,6 +242,7 @@ data "template_file" "prv-proxy-b" {
     publickey    = "${var.publickey}"
     proxy-a-ip   = "${alicloud_instance.proxy-a.private_ip}"
     dest-domains = "${var.dest-domains}"
+    region-id    = "${var.region-b}"
   }
 }
 
@@ -259,28 +262,71 @@ resource "alicloud_log_store" "store-a"{
   max_split_shard_count = 60
   append_meta           = true
 }
+
 resource "alicloud_logtail_config" "config-a" {
   provider     = "alicloud.region-a"
   project      = "${alicloud_log_project.project-a.name}"
   logstore     = "${alicloud_log_store.store-a.name}"
   input_type   = "file"
-  log_sample   = "test"
   name         = "${var.logtail_config_name-a}"
   output_type  = "LogService"
-  input_detail = "${data.template_file.configjs.rendered}"
-}
-
-data "template_file" "configjs" {
-  template = "${file("templates/config.tpl")}"
-  vars     = {
-    configname     = "${var.logtail_config_name-a}"
-    logstorename    = "${var.log_store_name-a}"
-  }
+  log_sample   = "1554718819.175      4 10.255.255.6 TCP_MISS/200 913 POST http://ocsp.digicert.com/ - HIER_DIRECT/117.18.237.29 application/ocsp-response"
+  input_detail = "${file("static/logtail_config/config.js")}"
 }
 
 resource "alicloud_log_machine_group" "squid-a" {
-  project = "${alicloud_log_project.project-a.name}"
-  name = "tf-machine-group"
+  provider      = "alicloud.region-a"
+  project       = "${alicloud_log_project.project-a.name}"
+  name          = "tf-machine-group"
   identify_type = "ip"
-  identify_list = ["alicloud_instance.proxy-a.private_ip"]
+  identify_list = ["${alicloud_instance.proxy-a.private_ip}"]
+}
+
+resource "alicloud_logtail_attachment" "attachment-a" {
+  provider            = "alicloud.region-a"
+  project             = "${alicloud_log_project.project-a.name}"
+  logtail_config_name = "${alicloud_logtail_config.config-a.name}"
+  machine_group_name  = "${alicloud_log_machine_group.squid-a.name}"
+}
+
+resource "alicloud_log_project" "project-b"{
+  provider    = "alicloud.region-b"
+  name        = "${var.log_project_name-b}"
+  description = "create by terraform"
+}
+
+resource "alicloud_log_store" "store-b"{
+  provider              = "alicloud.region-b"
+  project               = "${alicloud_log_project.project-b.name}"
+  name                  = "${var.log_store_name-b}"
+  retention_period      = 3650
+  shard_count           = 2
+  auto_split            = true
+  max_split_shard_count = 60
+  append_meta           = true
+}
+resource "alicloud_logtail_config" "config-b" {
+  provider     = "alicloud.region-b"
+  project      = "${alicloud_log_project.project-b.name}"
+  logstore     = "${alicloud_log_store.store-b.name}"
+  input_type   = "file"
+  name         = "${var.logtail_config_name-b}"
+  output_type  = "LogService"
+  log_sample   = "1554718819.175      4 10.255.255.6 TCP_MISS/200 913 POST http://ocsp.digicert.com/ - HIER_DIRECT/117.18.237.29 application/ocsp-response"
+  input_detail = "${file("static/logtail_config/config.js")}"
+}
+
+resource "alicloud_log_machine_group" "squid-b" {
+  provider      = "alicloud.region-b"
+  project       = "${alicloud_log_project.project-b.name}"
+  name          = "tf-machine-group"
+  identify_type = "ip"
+  identify_list = ["${alicloud_instance.proxy-b.private_ip}"]
+}
+
+resource "alicloud_logtail_attachment" "attachment-b" {
+  provider            = "alicloud.region-b"
+  project             = "${alicloud_log_project.project-b.name}"
+  logtail_config_name = "${alicloud_logtail_config.config-b.name}"
+  machine_group_name  = "${alicloud_log_machine_group.squid-b.name}"
 }

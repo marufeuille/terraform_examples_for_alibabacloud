@@ -76,11 +76,20 @@ variable "host_name_region-b" {
   default = "proxy-ecs-b"
 }
 variable "log_project_name-a" {
-  default = "multi-region-sample"
+  default = "log-project-a"
 }
 variable "log_store_name-a" {
-  default = "squid-log"
+  default = "squid-log-a"
 }
 variable "logtail_config_name-a" {
-  default = "squid-config"
+  default = "squid-config-a"
+}
+variable "log_project_name-b" {
+  default = "log-project-b"
+}
+variable "log_store_name-b" {
+  default = "squid-log-b"
+}
+variable "logtail_config_name-b" {
+  default = "squid-config-b"
 }
