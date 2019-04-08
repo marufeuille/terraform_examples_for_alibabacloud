@@ -51,12 +51,6 @@ variable "ssl_vpn_client_cert_name" {
   default = "sample-cert"
 }
 
-<<<<<<< HEAD
-variable "zone_region-a" {}
-variable "zone_region-b" {}
-
-variable "publickey" {}
-=======
 variable "zone_region-a" {
   default = "ap-northeast-1a"
 }
@@ -99,4 +93,3 @@ variable "log_store_name-b" {
 variable "logtail_config_name-b" {
   default = "squid-config-b"
 }
->>>>>>> cen
