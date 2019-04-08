@@ -1,3 +1,4 @@
+** Sorry, this document is old. **
 # MultiRegion Connection with CEN example
 This is a sample code to create MultiRegion Connection using CEN.
 This sample code creates following resource.
